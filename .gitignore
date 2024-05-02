@@ -1,5 +1,6 @@
 sample.dav
 .env
+file_records.db
 env/
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -35,3 +36,4 @@ MANIFEST
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
+openai.py
