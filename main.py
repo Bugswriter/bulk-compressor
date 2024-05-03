@@ -1,26 +1,21 @@
-import uuid
-import sqlite3
 import os
+import sqlite3
 import time
-from video_compressor import compressor
+import uuid
 from ftplib import FTP
+
 from dotenv import load_dotenv
 
-# input_filename = "sample.dav"
-# output_filename = "output/output_sample.mp4"
-# compressor.compress_video(input_filename, output_filename)
+from video_compressor import compressor
 
 
 def get_ftp_credentials():
-    # Load environment variables from .env file
     load_dotenv()
-
-    # Retrieve FTP host, username, and password from environment variables
     ftp_host = os.getenv("FTP_HOST")
     ftp_username = os.getenv("FTP_USER")
     ftp_password = os.getenv("FTP_PASS")
-
     return ftp_host, ftp_username, ftp_password
+
 
 def fetch_dav_files(ftp, directory="/AI/Input", dav_files=[]):
     try:
@@ -33,30 +28,37 @@ def fetch_dav_files(ftp, directory="/AI/Input", dav_files=[]):
 
     for file in files:
         if file.endswith(".dav"):
-            video_file_path = os.path.join(directory, file)
-            ftp_host, ftp_user, ftp_pass = get_ftp_credentials()
-            ftp_path_input = f"ftp://{ftp_user}:{ftp_pass}@{ftp_host}{video_file_path}"
-            uuid_key = str(uuid.uuid4())
-            temp_file_store_path = f"/tmp/{uuid_key}.mp4"
-            print("Compressing ", video_file_path)
-            compressor.compress_video(ftp_path_input, temp_file_store_path)
-            print("Uploading ", temp_file_store_path)
-            # ftp_upload(temp_file_store_path, video_file_path.replace('/AI/Input', '/AI/Output'))
-            video_file_path = video_file_path
-            ftp_upload(temp_file_store_path, '/AI/Output/')
-            print("Adding record ", uuid_key)
-            add_success_record(uuid_key, video_file_path)
-            dav_files.append(video_file_path)
-            quit()
+            process_dav_file(ftp, directory, file)
+            dav_files.append(os.path.join(directory, file))
         elif "." not in file:  # Directory
             fetch_dav_files(ftp, os.path.join(directory, file), dav_files)
 
+
+def process_dav_file(ftp, directory, file):
+    video_file_path = os.path.join(directory, file)
+    print(f"Processing {video_file_path.split('/')[-1]}...")
+
+    ftp_host, ftp_user, ftp_pass = get_ftp_credentials()
+    ftp_path_input = f"ftp://{ftp_user}:{ftp_pass}@{ftp_host}{video_file_path}"
+
+    uuid_key = str(uuid.uuid4()).split('-')[0]
+    temp_file_store_path = f"/tmp/{uuid_key}.mp4"
+
+    print("Compressing ", video_file_path)
+    compressor.compress_video(ftp_path_input, temp_file_store_path)
+
+    print("Uploading ", temp_file_store_path)
+    ftp_upload(ftp, temp_file_store_path, video_file_path.replace('/AI/Input', '/AI/Output'))
+
+    print("Adding record ", uuid_key)
+    add_success_record(uuid_key, video_file_path)
 
 
 def count_dav_files(ftp):
     dav_files = []
     fetch_dav_files(ftp, dav_files=dav_files)
     return len(dav_files)
+
 
 def main():
     ftp_host, ftp_user, ftp_pass = get_ftp_credentials()
@@ -74,23 +76,29 @@ def main():
 
     ftp.quit()
 
-def create_remote_directories(ftp, full_path):
-	print(ftp.cwd('/'))
-	print(ftp.mkd('test'))
 
+def ftp_upload(ftp, src_path, dst_path):
+    try:
+        create_directory_structure(ftp, dst_path)
+    except Exception as e:
+        print(f"{dst_path}")
+        print(f"Error: {e}")
 
-def ftp_upload(src_path, dst_path):
-    print(src_path, dst_path)
-    ftp_host, ftp_user, ftp_pass = get_ftp_credentials()
-    ftp = FTP(ftp_host)
-    print(ftp.login(ftp_user, ftp_pass))
-    # create_remote_directories(ftp, dst_path)
-	
     with open(src_path, 'rb') as file:
-        ftp.storbinary('STOR ' + f"/AI/Output{dst_path}", file)
+        ftp.storbinary('STOR ' + os.path.basename(dst_path), file)
 
-    ftp.quit()
+    ftp.cwd('/')
     print("File uploaded successfully.")
+
+
+def create_directory_structure(ftp, file_path):
+    ftp.cwd('/')
+    path_parts = file_path.strip('/').split('/')
+    for path in path_parts:
+        if path not in ftp.nlst():
+            ftp.mkd(path)
+        ftp.cwd(path)
+
 
 def add_success_record(uuid_value, file_path):
     conn = sqlite3.connect('file_records.db')
@@ -110,7 +118,8 @@ def add_success_record(uuid_value, file_path):
     conn.commit()
     cursor.close()
     conn.close()
-    
+
 
 if __name__ == "__main__":
     main()
+

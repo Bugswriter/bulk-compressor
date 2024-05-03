@@ -1,6 +1,8 @@
 sample.dav
 .env
+.notes
 file_records.db
+.main.py.bak
 env/
 # Byte-compiled / optimized / DLL files
 __pycache__/
