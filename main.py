@@ -2,11 +2,17 @@ import os
 import sqlite3
 import time
 import uuid
+import hashlib
 from ftplib import FTP
 
 from dotenv import load_dotenv
 
 from video_compressor import compressor
+
+
+def hash_encode(data):
+    hash_object = hashlib.sha256(data.encode())
+    return hash_object.hexdigest()
 
 
 def get_ftp_credentials():
@@ -15,6 +21,25 @@ def get_ftp_credentials():
     ftp_username = os.getenv("FTP_USER")
     ftp_password = os.getenv("FTP_PASS")
     return ftp_host, ftp_username, ftp_password
+
+
+def check_record_existence(uuid_key):
+    load_dotenv()
+    DB_PATH = os.getenv("DB_PATH")
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    select_query = """
+    SELECT id FROM files WHERE id = ?
+    """
+    cursor.execute(select_query, (uuid_key,))
+    result = cursor.fetchone()
+
+    cursor.close()
+    conn.close()
+
+    return result is not None
+
 
 
 def fetch_dav_files(ftp, directory="/AI/Input", dav_files=[]):
@@ -41,7 +66,11 @@ def process_dav_file(ftp, directory, file):
     ftp_host, ftp_user, ftp_pass = get_ftp_credentials()
     ftp_path_input = f"ftp://{ftp_user}:{ftp_pass}@{ftp_host}{video_file_path}"
 
-    uuid_key = str(uuid.uuid4()).split('-')[0]
+    uuid_key = hash_encode(video_file_path)
+    if check_record_existence(uuid_key):
+        print("> Video Already Exist...")
+        return
+
     temp_file_store_path = f"/tmp/{uuid_key}.mp4"
 
     print("Compressing ", video_file_path)
@@ -101,7 +130,9 @@ def create_directory_structure(ftp, file_path):
 
 
 def add_success_record(uuid_value, file_path):
-    conn = sqlite3.connect('file_records.db')
+    load_dotenv()
+    DB_PATH = os.getenv("DB_PATH")
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
     record_data = (
@@ -122,4 +153,3 @@ def add_success_record(uuid_value, file_path):
 
 if __name__ == "__main__":
     main()
-

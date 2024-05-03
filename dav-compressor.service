@@ -1,0 +1,12 @@
+[Unit]
+Description=Dav Compressor Service
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/bulk-compressor
+ExecStart=/home/ubuntu/bulk-compressor/env/bin/python /home/ubuntu/bulk-compressor/main.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
