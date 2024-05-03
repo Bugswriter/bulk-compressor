@@ -3,6 +3,7 @@ sample.dav
 .notes
 file_records.db
 .main.py.bak
+davc.log
 env/
 # Byte-compiled / optimized / DLL files
 __pycache__/

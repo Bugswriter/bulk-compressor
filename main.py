@@ -3,11 +3,27 @@ import sqlite3
 import time
 import uuid
 import hashlib
+import logging
 from ftplib import FTP
-
 from dotenv import load_dotenv
-
 from video_compressor import compressor
+
+load_dotenv()
+
+def davc_log(log_level, message):
+    LOG_PATH = os.getenv("LOG_PATH")
+    logging.basicConfig(filename=LOG_PATH, level=logging.INFO,
+                        format='%(asctime)s - %(levelname)s - %(message)s')
+
+    if log_level == 1:
+        logging.error(message)
+    elif log_level == 0:
+        logging.info(message)
+    else:
+        raise ValueError("Invalid log_level. Use 0 for INFO and 1 for ERROR")
+
+# davc_log(1, "This is an error message")
+
 
 
 def hash_encode(data):
@@ -16,7 +32,6 @@ def hash_encode(data):
 
 
 def get_ftp_credentials():
-    load_dotenv()
     ftp_host = os.getenv("FTP_HOST")
     ftp_username = os.getenv("FTP_USER")
     ftp_password = os.getenv("FTP_PASS")
@@ -61,14 +76,16 @@ def fetch_dav_files(ftp, directory="/AI/Input", dav_files=[]):
 
 def process_dav_file(ftp, directory, file):
     video_file_path = os.path.join(directory, file)
-    print(f"Processing {video_file_path.split('/')[-1]}...")
+    video_name = video_file_path.split('/')[-1]
+
+    davc_log(0, f"STARTING - {video_name}")
 
     ftp_host, ftp_user, ftp_pass = get_ftp_credentials()
     ftp_path_input = f"ftp://{ftp_user}:{ftp_pass}@{ftp_host}{video_file_path}"
 
     uuid_key = hash_encode(video_file_path)
     if check_record_existence(uuid_key):
-        print("> Video Already Exist...")
+        print(f"> {video_name} already exist, skipping...")
         return
 
     temp_file_store_path = f"/tmp/{uuid_key}.mp4"
@@ -81,6 +98,8 @@ def process_dav_file(ftp, directory, file):
 
     print("Adding record ", uuid_key)
     add_success_record(uuid_key, video_file_path)
+
+    davc_log(0, f"FINISHED - {video_name}")
 
 
 def count_dav_files(ftp):
@@ -131,7 +150,6 @@ def create_directory_structure(ftp, file_path):
 
 
 def add_success_record(uuid_value, file_path):
-    load_dotenv()
     DB_PATH = os.getenv("DB_PATH")
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
