@@ -78,15 +78,18 @@ def process_dav_file(ftp, directory, file):
     video_file_path = os.path.join(directory, file)
     video_name = video_file_path.split('/')[-1]
 
-    davc_log(0, f"STARTING - {video_name}")
 
     ftp_host, ftp_user, ftp_pass = get_ftp_credentials()
     ftp_path_input = f"ftp://{ftp_user}:{ftp_pass}@{ftp_host}{video_file_path}"
 
     uuid_key = hash_encode(video_file_path)
     if check_record_existence(uuid_key):
+        # davc_log(0, f"SKIPPING - {video_name}")
         print(f"> {video_name} already exist, skipping...")
         return
+
+    davc_log(0, f"STARTING - {video_name}")
+    start_time = time.time()
 
     temp_file_store_path = f"/tmp/{uuid_key}.mp4"
 
@@ -99,7 +102,9 @@ def process_dav_file(ftp, directory, file):
     print("Adding record ", uuid_key)
     add_success_record(uuid_key, video_file_path)
 
-    davc_log(0, f"FINISHED - {video_name}")
+    end_time = time.time()
+    time_took = end_time - start_time
+    davc_log(0, f"FINISHED [{time_took:.2f} sec] - {video_name}")
 
 
 def count_dav_files(ftp):
