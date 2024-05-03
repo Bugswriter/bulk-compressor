@@ -123,6 +123,7 @@ def ftp_upload(ftp, src_path, dst_path):
 def create_directory_structure(ftp, file_path):
     ftp.cwd('/')
     path_parts = file_path.strip('/').split('/')
+    path_parts.pop()
     for path in path_parts:
         if path not in ftp.nlst():
             ftp.mkd(path)
