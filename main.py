@@ -71,29 +71,34 @@ def process_dav_file(ftp, directory, file):
 
     print("OpenAI Processing Frame ", image_path_output)
     ai_response = openai_frame_process(image_path_output)
+    print(ai_response)
 
     print("Adding record ", uuid_key)
     original_size = get_file_size(ftp_path_input)
     compressed_size = get_file_size(temp_file_store_path)
     resolution = get_video_resolution(temp_file_store_path)
-    file_info = {
+
+    video_record_data = {
+		"uuid_key": uuid_key,
+		"file_path": video_file_path,
         "original_size": original_size,
         "compressed_size": compressed_size,
         "resolution": resolution,
 		"datetime": ai_response.get('datetime'),
 		"text_in_image": ai_response.get('text_in_image'),
-		"is_camera_tilted": ai_response.get('is_camera_tilted'),
-		"is_camera_tampered": ai_response.get('is_camera_tempered'),
-		"are_there_people_in_the_image": ai_response.get('are_there_people_in_the_image')
+		"is_camera_tilted": "YES" if ai_response.get('is_camera_tilted') else "NO",
+		"is_camera_tampered": "YES" if ai_response.get('is_camera_tampered') else "NO",
+		"are_there_people_in_the_image": "YES" if ai_response.get('are_there_people_in_the_image') else "NO"
     }
 
     os.remove(temp_file_store_path)
     os.remove(image_path_output)
-    add_success_record(uuid_key, video_file_path, file_info)
+    add_success_record(video_record_data)
 	
     end_time = time.time()
     time_took = end_time - start_time
     davc_log(0, f"FINISHED [{time_took:.2f} sec] - {video_name}")
+
 
 def ftp_upload(ftp, src_path, dst_path):
     try:
@@ -118,19 +123,12 @@ def create_directory_structure(ftp, file_path):
             ftp.mkd(path)
         ftp.cwd(path)
 
-def add_success_record(uuid_value, file_path, file_info):
+def add_success_record(video_record_data):
     load_dotenv()
     DB_PATH = os.getenv("DB_PATH")
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-
-    record_data = (
-        uuid_value,
-        file_path,
-        file_info.get('original_size'),
-        file_info.get('compressed_size'),
-        file_info.get('resolution')
-    )
+    record_data = tuple(video_record_data.values())
     
     print("Record data:", record_data)  # Print record_data for debugging
 

@@ -60,7 +60,6 @@ def send_openai_request(image_path):
 # Function to extract content from response and parse it as JSON
 def extract_json_content(response):
     res = response.json()
-    print(res)
     content = res['choices'][0]['message']['content']
     content = content.replace('```json', '')
     content = content.replace('```', '')
