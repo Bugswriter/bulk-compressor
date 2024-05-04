@@ -129,3 +129,30 @@ def get_success_records(page):
         print(f"Error fetching records: {e}")
         return None
 	
+def get_total_size_stats():
+    try:
+        load_dotenv()
+        DB_PATH = os.getenv("DB_PATH")
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        # Query to calculate the sum of original_size and compressed_size
+        query = """
+        SELECT SUM(original_size) AS total_original_size, SUM(compressed_size) AS total_compressed_size FROM files
+        """
+        cursor.execute(query)
+        
+        # Fetch the results
+        result = cursor.fetchone()
+
+        # Convert the result to a dictionary
+        stats = {
+            "total_original_size": result[0] if result[0] is not None else 0,
+            "total_compressed_size": result[1] if result[1] is not None else 0
+        }
+
+        return stats
+
+    except Exception as e:
+        print(f"Error fetching stats: {e}")
+        return None	

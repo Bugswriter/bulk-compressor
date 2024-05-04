@@ -1,8 +1,10 @@
 import uvicorn
 from fastapi import FastAPI, HTTPException
 import subprocess
-from src.utils import get_ftp_connection, count_dav_files
-from src.utils import get_success_records
+from src.utils import (get_ftp_connection,
+					   count_dav_files,
+					   get_total_size_stats,
+					   get_success_records)
 
 app = FastAPI()
 
@@ -30,9 +32,13 @@ async def davc_stats():
         ftp_connection = get_ftp_connection()
         dav_input_count = count_dav_files(ftp_connection, '/AI/Input')
         dav_output_count = count_dav_files(ftp_connection, '/AI/Output')
+        total_sizes = get_total_size_stats()
+
         return {
 			"total_uncompressed_videos": dav_input_count,			
-			"total_compressed_videos": dav_output_count
+			"total_compressed_videos": dav_output_count,
+			"total_original_filesize": total_sizes['total_original_size'],
+			"total_compressed_filesize": total_sizes['total_compressed_size']
 		}
     except Exception as _:
         raise HTTPException(status_code=500, detail="Failed to get total videos count")
