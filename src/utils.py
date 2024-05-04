@@ -81,7 +81,7 @@ def get_file_size(file_path):
             ftp.quit()
 
         size_mb = size_bytes / (1024 * 1024)  # Convert bytes to MB
-        return size_mb
+        return f"{size_mb:.0f} MB"
 
     except Exception as e:
         print(f"Error getting file size: {e}")
@@ -95,8 +95,7 @@ def get_video_resolution(video_path):
         # Parse the output to extract width and height
         resolution_str = result.stdout.strip()
         width, height = map(int, re.findall(r'\d+', resolution_str))
-        
-        return (width, height)
+        return f"{width}x{height}"
     except Exception as e:
         print(f"Error getting video resolution: {e}")
         return None

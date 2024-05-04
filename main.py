@@ -62,6 +62,7 @@ def process_dav_file(ftp, directory, file):
 
     print("Uploading ", temp_file_store_path)
     ftp_upload(ftp, temp_file_store_path, video_file_path.replace('/AI/Input', '/AI/Output'))
+    os.remove(temp_file_store_path)
 
     print("Adding record ", uuid_key)
     original_size = get_file_size(ftp_path_input)
@@ -110,20 +111,22 @@ def add_success_record(uuid_value, file_path, file_info):
     record_data = (
         uuid_value,
         file_path,
-		file_info.get('original_size'),
-		file_info.get('compressed_size'),
-		file_info.get('resolution')
+        file_info.get('original_size'),
+        file_info.get('compressed_size'),
+        file_info.get('resolution')
     )
+    
+    print("Record data:", record_data)  # Print record_data for debugging
+    
     insert_query = """
     INSERT INTO files (id, file_path, original_size, compressed_size, resolution)
     VALUES (?, ?, ?, ?, ?)
-    """	
+    """ 
     cursor.execute(insert_query, record_data)
     conn.commit()
     cursor.close()
     conn.close()
-
-
+	
 def main():
     ftp = get_ftp_connection()
     dav_files = []
