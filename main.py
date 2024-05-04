@@ -116,7 +116,7 @@ def add_success_record(uuid_value, file_path, file_info):
     )
     insert_query = """
     INSERT INTO files (id, file_path, original_size, compressed_size, resolution)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?)
     """	
     cursor.execute(insert_query, record_data)
     conn.commit()
