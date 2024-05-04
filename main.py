@@ -63,7 +63,6 @@ def process_dav_file(ftp, directory, file):
     print("Uploading ", temp_file_store_path)
     ftp_upload(ftp, temp_file_store_path, video_file_path.replace('/AI/Input', '/AI/Output'))
 
-
     print("Adding record ", uuid_key)
     original_size = get_file_size(ftp_path_input)
     compressed_size = get_file_size(temp_file_store_path)

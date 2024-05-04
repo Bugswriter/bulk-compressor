@@ -2,6 +2,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException
 import subprocess
 from src.utils import get_ftp_connection, count_dav_files
+from src.utils import get_success_records
 
 app = FastAPI()
 
@@ -24,7 +25,7 @@ async def stop_service():
         raise HTTPException(status_code=500, detail="Failed to stop service")
 
 @app.get("/davc/stats")
-async def total_videos():
+async def davc_stats():
     try:
         ftp_connection = get_ftp_connection()
         dav_input_count = count_dav_files(ftp_connection, '/AI/Input')
@@ -35,3 +36,20 @@ async def total_videos():
 		}
     except Exception as _:
         raise HTTPException(status_code=500, detail="Failed to get total videos count")
+
+
+@app.get("/davc/records")
+async def davc_records(page: int = None):
+    try:
+        if page is not None and isinstance(page, int):
+            records = get_success_records(page)
+        else:
+            records = get_success_records(1)
+        
+        if records:
+            return records
+        else:
+            raise HTTPException(status_code=404, detail="No records found")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Failed to get list of records")

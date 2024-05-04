@@ -5,6 +5,7 @@ import hashlib
 from urllib.parse import urlparse
 from ftplib import FTP
 from dotenv import load_dotenv
+import sqlite3
 import subprocess
 
 def hash_encode(data):
@@ -99,3 +100,32 @@ def get_video_resolution(video_path):
     except Exception as e:
         print(f"Error getting video resolution: {e}")
         return None
+
+def get_success_records(page):
+    try:
+        load_dotenv()
+        DB_PATH = os.getenv("DB_PATH")
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row  # Access columns by name
+        cursor = conn.cursor()
+
+        offset = (page - 1) * 25  # Calculate the offset for pagination
+        
+        # Query to fetch records with pagination
+        query = """
+        SELECT * FROM files LIMIT 25 OFFSET ?
+        """
+        cursor.execute(query, (offset,))
+        
+        records = []
+        for row in cursor.fetchall():
+            # Convert each row to a dictionary
+            record_dict = dict(row)
+            records.append(record_dict)
+
+        return records
+
+    except Exception as e:
+        print(f"Error fetching records: {e}")
+        return None
+	
