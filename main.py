@@ -2,7 +2,11 @@ import os
 import sqlite3
 import time
 import ftplib
-from src.utils import (get_ftp_credentials, get_ftp_connection, hash_encode, davc_log)
+from src.utils import (get_ftp_credentials,
+					   get_ftp_connection,
+					   get_video_resolution,
+					   hash_encode, davc_log,
+					   get_file_size)
 from src.compressor import compress_video
 from dotenv import load_dotenv
 
@@ -60,9 +64,16 @@ def process_dav_file(ftp, directory, file):
     ftp_upload(ftp, temp_file_store_path, video_file_path.replace('/AI/Input', '/AI/Output'))
 
     print("Adding record ", uuid_key)
-    add_success_record(uuid_key, video_file_path)
-
-
+    original_size = get_file_size(ftp_path_input)
+    compressed_size = get_file_size(temp_file_store_path)
+    resolution = get_video_resolution(temp_file_store_path)
+    file_info = {
+        "original_size": original_size,
+        "compressed_size": compressed_size,
+        "resolution": resolution
+    }
+    add_success_record(uuid_key, video_file_path, file_info)
+	
     end_time = time.time()
     time_took = end_time - start_time
     davc_log(0, f"FINISHED [{time_took:.2f} sec] - {video_name}")
@@ -90,8 +101,8 @@ def create_directory_structure(ftp, file_path):
             ftp.mkd(path)
         ftp.cwd(path)
 
-
-def add_success_record(uuid_value, file_path):
+def add_success_record(uuid_value, file_path, file_info):
+    load_dotenv()
     DB_PATH = os.getenv("DB_PATH")
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -99,13 +110,14 @@ def add_success_record(uuid_value, file_path):
     record_data = (
         uuid_value,
         file_path,
-        1,
-        0
+		file_info.get('original_size'),
+		file_info.get('compressed_size'),
+		file_info.get('resolution')
     )
     insert_query = """
-    INSERT INTO files (id, full_file_path, is_compressed, is_aiocr)
-    VALUES (?, ?, ?, ?)
-    """
+    INSERT INTO files (id, file_path, original_size, compressed_size, resolution)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    """	
     cursor.execute(insert_query, record_data)
     conn.commit()
     cursor.close()

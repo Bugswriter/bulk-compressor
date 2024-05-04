@@ -1,8 +1,10 @@
 import os
 import logging
 import hashlib
+from urllib.parse import urlparse
 from ftplib import FTP
 from dotenv import load_dotenv
+import subprocess
 
 def hash_encode(data):
     hash_object = hashlib.sha256(data.encode())
@@ -59,4 +61,41 @@ def count_dav_files(ftp_connection, directory):
                 file_count += 1
         return file_count
     except Exception as e:
+        return None
+
+def get_file_size(file_path):
+    try:
+        parsed_url = urlparse(file_path)
+
+        # Local file
+        if parsed_url.scheme == '':
+            size_bytes = os.path.getsize(file_path)
+        
+        # FTP file
+        elif parsed_url.scheme == 'ftp':
+            ftp = FTP(parsed_url.hostname)
+            ftp.login(parsed_url.username, parsed_url.password)
+            ftp.cwd(os.path.dirname(parsed_url.path))
+            size_bytes = ftp.size(os.path.basename(parsed_url.path))
+            ftp.quit()
+
+        size_mb = size_bytes / (1024 * 1024)  # Convert bytes to MB
+        return size_mb
+
+    except Exception as e:
+        print(f"Error getting file size: {e}")
+        return None
+
+def get_video_resolution(video_path):
+    try:
+        # Run ffprobe command to get video information
+        result = subprocess.run(['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', video_path], capture_output=True, text=True)
+        
+        # Parse the output to extract width and height
+        resolution_str = result.stdout.strip()
+        width, height = map(int, re.findall(r'\d+', resolution_str))
+        
+        return (width, height)
+    except Exception as e:
+        print(f"Error getting video resolution: {e}")
         return None
