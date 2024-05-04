@@ -82,7 +82,7 @@ def get_file_size(file_path):
             ftp.quit()
 
         size_mb = size_bytes / (1024 * 1024)  # Convert bytes to MB
-        return f"{size_mb:.0f} MB"
+        return int(size_mb)
 
     except Exception as e:
         print(f"Error getting file size: {e}")
