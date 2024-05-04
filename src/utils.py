@@ -1,5 +1,6 @@
 import re
 import os
+import cv2
 import logging
 import hashlib
 from urllib.parse import urlparse
@@ -156,3 +157,20 @@ def get_total_size_stats():
     except Exception as e:
         print(f"Error fetching stats: {e}")
         return None	
+
+def fetch_first_frame(video_path, output_path):
+    video_capture = cv2.VideoCapture(video_path)
+
+    if not video_capture.isOpened():
+        print("Error: Unable to open video file.")
+        return
+
+    success, frame = video_capture.read()
+
+    if not success:
+        print("Error: Unable to read the first frame.")
+        return
+
+    cv2.imwrite(output_path, frame)
+    video_capture.release()
+    print("First frame saved successfully.")

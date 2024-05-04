@@ -6,9 +6,12 @@ from src.utils import (get_ftp_credentials,
 					   get_ftp_connection,
 					   get_video_resolution,
 					   hash_encode, davc_log,
-					   get_file_size)
+					   get_file_size,
+					   fetch_first_frame)
 from src.compressor import compress_video
+from src.ai import openai_frame_process
 from dotenv import load_dotenv
+
 
 def check_record_existence(uuid_key):
     load_dotenv()
@@ -46,15 +49,15 @@ def process_dav_file(ftp, directory, file):
     video_name = video_file_path.split('/')[-1]
     ftp_host, ftp_user, ftp_pass = get_ftp_credentials()
     ftp_path_input = f"ftp://{ftp_user}:{ftp_pass}@{ftp_host}{video_file_path}"
-
     uuid_key = hash_encode(video_file_path)
+    image_path_output = f"/tmp/{uuid_key}.jpg"
+	
     if check_record_existence(uuid_key):
         print(f"> {video_name} already exist, skipping...")
         return
 
     davc_log(0, f"STARTING - {video_name}")
     start_time = time.time()
-
     temp_file_store_path = f"/tmp/{uuid_key}.mp4"
 
     print("Compressing ", video_file_path)
@@ -63,6 +66,12 @@ def process_dav_file(ftp, directory, file):
     print("Uploading ", temp_file_store_path)
     ftp_upload(ftp, temp_file_store_path, video_file_path.replace('/AI/Input', '/AI/Output'))
 
+    print("Fetching First Frame ", temp_file_store_path)
+    fetch_first_frame(temp_file_store_path, image_path_output)
+
+    print("OpenAI Processing Frame ", image_path_output)
+    ai_response = openai_frame_process(image_path_output)
+
     print("Adding record ", uuid_key)
     original_size = get_file_size(ftp_path_input)
     compressed_size = get_file_size(temp_file_store_path)
@@ -70,10 +79,16 @@ def process_dav_file(ftp, directory, file):
     file_info = {
         "original_size": original_size,
         "compressed_size": compressed_size,
-        "resolution": resolution
+        "resolution": resolution,
+		"datetime": ai_response.get('datetime'),
+		"text_in_image": ai_response.get('text_in_image'),
+		"is_camera_tilted": ai_response.get('is_camera_tilted'),
+		"is_camera_tampered": ai_response.get('is_camera_tempered'),
+		"are_there_people_in_the_image": ai_response.get('are_there_people_in_the_image')
     }
 
     os.remove(temp_file_store_path)
+    os.remove(image_path_output)
     add_success_record(uuid_key, video_file_path, file_info)
 	
     end_time = time.time()
@@ -118,11 +133,13 @@ def add_success_record(uuid_value, file_path, file_info):
     )
     
     print("Record data:", record_data)  # Print record_data for debugging
-    
+
     insert_query = """
-    INSERT INTO files (id, file_path, original_size, compressed_size, resolution)
-    VALUES (?, ?, ?, ?, ?)
-    """ 
+	INSERT INTO files
+	(id, file_path, original_size, compressed_size, resolution, datetime, text_in_image, is_camera_tilted, is_camera_tampered, are_there_people_in_the_image)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	"""
+	
     cursor.execute(insert_query, record_data)
     conn.commit()
     cursor.close()
