@@ -1,0 +1,14 @@
+[Unit]
+Description=Davc API Service
+After=network.target
+
+[Service]
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/bulk-compressor
+Environment="PATH=/home/ubuntu/bulk-compressor/env/bin"
+ExecStart=/home/ubuntu/bulk-compressor/env/bin/python /home/ubuntu/bulk-compressor/start_api.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
